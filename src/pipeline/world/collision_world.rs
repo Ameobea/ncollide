@@ -51,7 +51,7 @@ impl<N: Real, T> CollisionWorld<N, T> {
             contact_events: ContactEvents::new(),
             proximity_events: ProximityEvents::new(),
             objects: objects,
-            broad_phase: broad_phase,
+            broad_phase,
             narrow_phase: Box::new(narrow_phase),
             pair_filters: BroadPhasePairFilters::new(),
             timestamp: 0,
@@ -286,6 +286,12 @@ impl<N: Real, T> CollisionWorld<N, T> {
             self.broad_phase
                 .deferred_recompute_all_proximities_with(co.proxy_handle());
         }
+    }
+
+    /// Returns a reference to the inner `BroadPhase`.
+    #[inline]
+    pub fn broad_phase(&self) -> &Box<BroadPhase<N, AABB<N>, CollisionObjectHandle>> {
+        &self.broad_phase
     }
 
     /// Computes the interferences between every rigid bodies on this world and a ray.
