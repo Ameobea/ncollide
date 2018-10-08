@@ -160,23 +160,17 @@ impl<N: Real, B, BV: BoundingVolume<N>> DBVT<N, B, BV> {
                                 (node.left, node.right)
                             };
 
-                            let dist1 = match left {
+                            let compute_node_distance = |node: &DBVTNodeId| match node {
                                 DBVTNodeId::Leaf(l) => {
-                                    na::distance_squared(&self.leaves[l].center, &leaf.center)
+                                    na::distance_squared(&self.leaves[*l].center, &leaf.center)
                                 }
                                 DBVTNodeId::Internal(i) => {
-                                    na::distance_squared(&self.internals[i].center, &leaf.center)
+                                    na::distance_squared(&self.internals[*i].center, &leaf.center)
                                 }
                             };
 
-                            let dist2 = match right {
-                                DBVTNodeId::Leaf(l) => {
-                                    na::distance_squared(&self.leaves[l].center, &leaf.center)
-                                }
-                                DBVTNodeId::Internal(i) => {
-                                    na::distance_squared(&self.internals[i].center, &leaf.center)
-                                }
-                            };
+                            let dist1 = compute_node_distance(&left);
+                            let dist2 = compute_node_distance(&right);
 
                             curr = if dist1 < dist2 { left } else { right };
                         }
@@ -244,20 +238,11 @@ impl<N: Real, B, BV: BoundingVolume<N>> DBVT<N, B, BV> {
         let leaf = self.leaves.remove(leaf_id);
 
         if !leaf.is_root() {
-            let p;
-            let other;
-
-            match leaf.parent {
-                DBVTInternalId::RightChildOf(parent) => {
-                    other = self.internals[parent].left;
-                    p = parent;
-                }
-                DBVTInternalId::LeftChildOf(parent) => {
-                    other = self.internals[parent].right;
-                    p = parent;
-                }
+            let (p, other) = match leaf.parent {
+                DBVTInternalId::RightChildOf(parent) => (parent, self.internals[parent].left),
+                DBVTInternalId::LeftChildOf(parent) => (parent, self.internals[parent].right),
                 DBVTInternalId::Root => unreachable!(),
-            }
+            };
 
             match self.internals[p].parent {
                 DBVTInternalId::RightChildOf(pp) => {

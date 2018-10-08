@@ -3,12 +3,12 @@
 use std::collections::BinaryHeap;
 
 use alga::general::Real;
+use bounding_volume::BoundingVolume;
+use math::{Point, DIM};
 use na;
 use partitioning::{BVTCostFn, BVTTVisitor, BVTVisitor};
-use bounding_volume::BoundingVolume;
-use utils::RefWithCost;
 use utils;
-use math::{Point, DIM};
+use utils::RefWithCost;
 
 /// A Bounding Volume Tree.
 #[derive(Clone)]
@@ -137,7 +137,7 @@ impl<B, BV> BVT<B, BV> {
             let sep_axis = depth % DIM;
 
             // compute the median along sep_axis
-            let mut median = Vec::new();
+            let mut median = Vec::with_capacity(leaves.len());
 
             for l in leaves.iter() {
                 let c = (*center)(&l.0, &l.1);
@@ -289,23 +289,20 @@ impl<B, BV> BVTNode<B, BV> {
 
                     match *node.object {
                         BVTNode::Internal(_, ref left, ref right) => {
-                            match algorithm.compute_bv_cost(left.bounding_volume()) {
-                                Some(lcost) => {
-                                    if lcost < best_cost {
-                                        queue.push(RefWithCost::new(&**left, -lcost))
+                            let mut compute_node_cost = |node: &'a Box<BVTNode<B, BV>>| {
+                                let bv = node.bounding_volume();
+                                match algorithm.compute_bv_cost(bv) {
+                                    Some(cost) => {
+                                        if cost < best_cost {
+                                            queue.push(RefWithCost::new(&**node, -cost))
+                                        }
                                     }
+                                    None => {}
                                 }
-                                None => {}
-                            }
+                            };
 
-                            match algorithm.compute_bv_cost(right.bounding_volume()) {
-                                Some(rcost) => {
-                                    if rcost < best_cost {
-                                        queue.push(RefWithCost::new(&**right, -rcost))
-                                    }
-                                }
-                                None => {}
-                            }
+                            compute_node_cost(left);
+                            compute_node_cost(right);
                         }
                         BVTNode::Leaf(_, ref b) => match algorithm.compute_b_cost(b) {
                             Some((candidate_cost, candidate_result)) => {
